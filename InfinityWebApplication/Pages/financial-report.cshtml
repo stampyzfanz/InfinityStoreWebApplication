@@ -1,0 +1,201 @@
+﻿@page
+@model FinancialReportModel
+@{
+    ViewData["Title"] = "Financial Report";
+}
+
+<br>
+<div class="text-center flex-container">
+    <div class="mid-bar">
+        <h1 class="display-4" style="margin-bottom: 40px;">Financial Report</h1>
+        <div class="box">
+        <label for="product-choice">Choose a product:</label>
+        <input list="products" id="product-choice" name="product-choice" class="textInput" value="@(Model.Product != null ? Model.Product : "All")" />
+
+        <datalist id="products">
+            <option value="All"></option>
+        @foreach (var Product in Model.Products) {
+            <option value="@Product.Name"></option>
+        }
+        </datalist>
+        </div>
+        <div class="box">
+        <label for="store-choice">Choose a store:</label>
+        <input list="stores" id="store-choice" name="store-choice" class="textInput" value="@(Model.Store != null ? Model.Store : "All")" />
+
+        <datalist id="stores">
+            <option value="All"></option>
+        @foreach (var Store in Model.Stores) {
+            <option value="@Store.Title"></option>
+        }
+        </datalist>
+        </div>
+        <label style="margin-top: 30px;">Between which dates:</label>
+        <div id="reportrange" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+            <i class="fa fa-calendar"></i>&nbsp;
+            <span>All Dates</span> <i class="fa fa-caret-down"></i>
+        </div>
+    </div>
+    <div>
+        <h1 class="display-4" style="margin-bottom: 40px;">Totals</h1>
+        <hr>
+        <p>@Model.TotalProductsDisplay</p>
+        <hr>
+        <div style="margin-top: 30px;">
+            <p><b>Total Revenue:</b> @Model.TotalRevenueDisplay</p>
+            <p><b>Total Cost:</b> @Model.TotalCostDisplay</p>
+            <p><b>Total Profit:</b> @Model.TotalProfitDisplay</p>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    #reportrange {
+        background: #fff; 
+        cursor: pointer; 
+        padding: 5px 10px; 
+        border: 1px solid #ccc; 
+        width: 100%;
+    }
+</style>
+<script src="https://kit.fontawesome.com/e6999c0eb3.js" crossorigin="anonymous"></script>
+@section scripts{
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+    <script defer="defer">
+        // When the user filters for a different store, update the statistics
+        $("#store-choice").on("change", (ev) => {
+            updateTotals({
+                "inputType": "textInput",
+                "parameter": "store", 
+                "element": ev.target
+            });
+        });
+
+        // When the user filters for a different product, update the statistics
+        $("#product-choice").on("change", (ev) => {
+            updateTotals({
+                "inputType": "textInput",
+                "parameter": "product", 
+                "element": ev.target
+            });
+        });
+
+        // When the user filters for a product or a store, warn user if it isn't a valid option
+        $(".textInput").on('change', function () {
+            let optionFound = false;
+            let datalist = this.list;
+            // Determine whether an option exists with the current value of the input.
+            for (let i = 0; i < datalist.options.length; i++) {
+                if (this.value == datalist.options[i].value) {
+                    optionFound = true;
+                    break;
+                }
+            }
+            // use the setCustomValidity function of the Validation API
+            // to provide an user feedback if the value does not exist in the datalist
+            if (optionFound || this.value === "") {
+                this.setCustomValidity('');
+            } else {
+                this.setCustomValidity('Please select a valid value.');
+            }
+            this.reportValidity();
+        });
+
+        // Formats the date that is displayed to the user 
+        function formatDate(moment) {
+            return moment.format('MMMM D, YYYY');
+        }
+
+        // Update the statistics by refreshing the page and performing the calculations serverside
+        function updateTotals(changedInput) {
+            const urlSearchParams = new URLSearchParams(window.location.search);
+            if (changedInput.inputType === "textInput") {
+                const datalist = changedInput.element.list;
+                let value = null;
+
+                for (let i = 0; i < datalist.options.length; i++) {
+                    if (changedInput.element.value == datalist.options[i].value) {
+                        value = changedInput.element.value;
+                        break;
+                    }
+                }
+                if (value === "All") {
+                    urlSearchParams.delete(changedInput.parameter);
+                } else if (value === null) {
+                    return;
+                } else {
+                    urlSearchParams.set(changedInput.parameter, value);
+                }
+            } else {
+                if (changedInput.isAllDates) {
+                    urlSearchParams.delete("startTimestamp");
+                    urlSearchParams.delete("endTimestamp");
+                } else {
+                    urlSearchParams.set("startTimestamp", changedInput.startTimestampFormatted);
+                    urlSearchParams.set("endTimestamp", changedInput.endTimestampFormatted);
+                }
+            }
+            let newLocation = window.location.origin + window.location.pathname;
+
+            if (urlSearchParams.toString() !== "") {
+                newLocation += "?" + urlSearchParams.toString();
+            }
+
+            if (newLocation !== window.location.href) {
+                window.location = newLocation;
+            }
+        }
+
+        
+
+        const allDatesStart = moment().subtract(2, 'hours').subtract(42, 'seconds');
+        const allDatesEnd = moment().subtract(3, 'days').subtract(42, 'seconds');
+
+        const hasStartTimestamp = "@Model.StartTimestamp" !== ""
+        const hasEndTimestamp   = "@Model.EndTimestamp"   !== ""
+        const initialStart = hasStartTimestamp ? moment("@(Model.StartTimestamp?.ToString("yyyy-MM-dd"))") : allDatesStart;
+        const initialEnd   = hasEndTimestamp   ? moment("@(Model.EndTimestamp?.ToString("yyyy-MM-dd"))")  : allDatesEnd;
+        // Updates the text that the user sees 
+        function updateDateRange(start, end, rangeName) {
+            // Since 'Today' gives start to be time at midnight at the start of the day
+            // and end to be midnight at the end of the day, the start needs to be
+            // infinitesimally increased to ensure the ISO has the right day
+            start.add(1, 'hour');
+            if (rangeName === "All Dates" || rangeName === "Automatic" && !hasStartTimestamp && !hasEndTimestamp) {
+                $('#reportrange span').html("All Dates");
+            } else if (formatDate(start) === formatDate(end)) {
+                $('#reportrange span').html(formatDate(start));
+            } else {
+                $('#reportrange span').html(`${ formatDate(start) } - ${ formatDate(end) }`);
+            }
+            if (rangeName !== "Automatic") {       
+                updateTotals({
+                    "startTimestampFormatted": start.format("YYYY-MM-DD"),
+                    "endTimestampFormatted":  end.format("YYYY-MM-DD"),
+                    "startTimestamp": start,
+                    "endTimestamp":  end,
+                    "isAllDates": rangeName === "All Dates"
+                });
+            }
+        }
+
+        $('#reportrange').daterangepicker({
+            startDate: initialStart,
+            endDate: initialEnd,
+            ranges: {
+                'Today': [moment(), moment()],
+                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                'This Month': [moment().startOf('month'), moment().endOf('month')],
+                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                'All Dates': [allDatesStart, allDatesEnd],
+            }
+        }, updateDateRange);
+
+        updateDateRange(initialStart, initialEnd, "Automatic");
+    </script>
+}

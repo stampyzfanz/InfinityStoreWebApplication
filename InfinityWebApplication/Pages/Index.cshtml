@@ -1,0 +1,29 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+  <div class="flex-container">
+    @foreach (var (item, imageUrl) in Model.Products.Zip(Model.ImageUrls)) {
+        <div class="card wide">
+            <a asp-page="./Products/Details" asp-route-id="@item.ProductId">
+                <img src="@imageUrl" style="width: 100%;">
+                <h3><b>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </b></h3>
+                <dd>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </dd>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SalePrice)
+                </td>
+            </a>
+        </div>
+    }
+  </div>
+</div>
+<br>
+<br>
+<br>
+<br>

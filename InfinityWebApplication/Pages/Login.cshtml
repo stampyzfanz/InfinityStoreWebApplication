@@ -1,0 +1,12 @@
+@page
+@model LoginModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Employee Login";
+}
+<h1>@ViewData["Title"]</h1>
+<form method="post">
+    Password:
+    <input asp-for="Password" type="password" />
+    <input type="submit" />
+</form>
