@@ -1,2 +1,2 @@
 # InfinityStoreWebApplication
-School assignment for a full stack functional store application.
+School assignment for a full stack working store application.
